@@ -10,8 +10,8 @@ Message::Message(Message::Type type,
                  int rumorId,
                  int round)
 : m_type(type)
-  , m_rumorId(rumorId)
-  , m_round(round)
+, m_rumorId(rumorId)
+, m_round(round)
 {}
 
 bool Message::operator==(const Message& other) const
@@ -24,6 +24,21 @@ bool Message::operator==(const Message& other) const
 bool Message::operator!=(const Message& other) const
 {
     return !(*this == other);
+}
+
+Message::Type Message::type() const
+{
+    return m_type;
+}
+
+int Message::rumorId() const
+{
+    return m_rumorId;
+}
+
+int Message::round() const
+{
+    return m_round;
 }
 
 } // project namespace

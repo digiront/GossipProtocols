@@ -8,6 +8,7 @@ namespace RRS {
 
 class NetworkConfig {
   private:
+    // MEMBERS
     // Number of peers
     int m_networkSize;
 
@@ -28,12 +29,17 @@ class NetworkConfig {
     std::unordered_map<std::string, double> m_statistics;
 
   public:
+    // CONSTRUCTORS
     // Create a NetworkConfig instance with the default initialization based on theory.
-    NetworkConfig(int numOfPeers);
+    explicit NetworkConfig(int numOfPeers);
 
     // Create a NetworkConfig with user specified configuration.
     NetworkConfig(int networkSize, int maxRoundsInB, int maxRoundsInC, int maxRoundsTotal);
 
+    // METHODS
+    std::unordered_map<std::string, double>& statistics();
+
+    // CONST METHODS
     int networkSize() const;
 
     int maxRoundsInB() const;
@@ -42,8 +48,7 @@ class NetworkConfig {
 
     int maxRoundsTotal() const;
 
-    std::unordered_map<std::string, double>& statistics();
-
+    bool operator==(const NetworkConfig& other) const;
 };
 
 } // project namespace

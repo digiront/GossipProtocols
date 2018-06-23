@@ -6,10 +6,10 @@ namespace RRS {
 // CONSTRUCTORS
 NetworkConfig::NetworkConfig(int numOfPeers)
 : m_networkSize(numOfPeers)
-  , m_maxRoundsInB()
-  , m_maxRoundsInC()
-  , m_maxRoundsTotal()
-  , m_statistics()
+, m_maxRoundsInB()
+, m_maxRoundsInC()
+, m_maxRoundsTotal()
+, m_statistics()
 {
     // Refer to "Randomized Rumor Spreading" paper
     int magicNumber = std::ceil(std::log(std::log(m_networkSize)));
@@ -19,13 +19,13 @@ NetworkConfig::NetworkConfig(int numOfPeers)
 }
 
 NetworkConfig::NetworkConfig(int networkSize,
-                           int maxRoundsInB,
-                           int maxRoundsInC,
-                           int maxRoundsTotal)
+                             int maxRoundsInB,
+                             int maxRoundsInC,
+                             int maxRoundsTotal)
 : m_networkSize(networkSize)
-  , m_maxRoundsInB(maxRoundsInB)
-  , m_maxRoundsInC(maxRoundsInC)
-  , m_maxRoundsTotal(maxRoundsTotal)
+, m_maxRoundsInB(maxRoundsInB)
+, m_maxRoundsInC(maxRoundsInC)
+, m_maxRoundsTotal(maxRoundsTotal)
 {}
 
 // PUBLIC CONST METHODS
@@ -56,5 +56,13 @@ std::unordered_map<std::string, double>& NetworkConfig::statistics()
 }
 
 
+bool NetworkConfig::operator==(const NetworkConfig& other) const
+{
+    return  m_networkSize == other.m_networkSize &&
+            m_maxRoundsInB == other.m_maxRoundsInB &&
+            m_maxRoundsInC == other.m_maxRoundsInC &&
+            m_maxRoundsTotal == other.m_maxRoundsTotal &&
+            m_statistics == other.m_statistics;
+}
 
 } // project namespace

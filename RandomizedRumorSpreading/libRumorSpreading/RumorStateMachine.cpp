@@ -3,11 +3,16 @@
 namespace RRS {
 
 // PRIVATE METHODS
-void RumorStateMachine::newHandler(const std::unordered_set<int>& membersInRound)
+void RumorStateMachine::handleNewRumor()
+{
+
+}
+
+void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound)
 {
     m_roundsInB++;
-    if (m_currentRound >= m_networkConfigRef.maxRoundsTotal()) {
-        m_state = OLD;
+    if (m_currentRound >= m_networkConfigPtr->maxRoundsTotal()) {
+        advanceOld();
         return;
     }
 
@@ -15,15 +20,15 @@ void RumorStateMachine::newHandler(const std::unordered_set<int>& membersInRound
         if (m_memberRounds.count(id) <= 0) m_memberRounds[id] = 0;
     }
 
+    // Compare our round to the majority of rounds
     int numLess = 0;
     int numGreaterOrEqual = 0;
     for (const auto entry : m_memberRounds) {
         int theirRound = entry.second;
-
         if (theirRound < m_currentRound) {
             numLess++;
         }
-        else if (theirRound >= m_networkConfigRef.maxRoundsInB()) {
+        else if (theirRound >= m_networkConfigPtr->maxRoundsInB()) {
             m_state = KNOWN;
         }
         else {
@@ -35,51 +40,78 @@ void RumorStateMachine::newHandler(const std::unordered_set<int>& membersInRound
         m_roundsInB++;
     }
 
-    if (m_roundsInB >= m_networkConfigRef.maxRoundsInB()) {
+    if (m_roundsInB >= m_networkConfigPtr->maxRoundsInB()) {
         m_state = KNOWN;
     }
     m_memberRounds.clear();
 }
 
-void RumorStateMachine::knownHandler()
+void RumorStateMachine::advanceKnown()
 {
     m_roundsInC++;
-    if (m_currentRound >= m_networkConfigRef.maxRoundsTotal() ||
-        m_roundsInC >= m_networkConfigRef.maxRoundsInC()) {
-        m_state = OLD;
+    if (m_currentRound >= m_networkConfigPtr->maxRoundsTotal() ||
+        m_roundsInC >= m_networkConfigPtr->maxRoundsInC()) {
+        advanceOld();
     }
 
 }
 
+void RumorStateMachine::advanceOld()
+{
+    m_state = OLD;
+    m_memberRounds.clear();
+    m_currentRound = -1;
+}
+
 // CONSTRUCTORS
-RumorStateMachine::RumorStateMachine(const NetworkConfig& networkConfigRef)
-: m_state(State::UNKNOWN)
-, m_networkConfigRef(networkConfigRef)
-, m_currentRound(0)
+RumorStateMachine::RumorStateMachine()
+: m_state(State::NEW)
+  , m_networkConfigPtr(0)
+  , m_currentRound(-1)
+  , m_roundsInB(-1)
+  , m_roundsInC(-1)
+  , m_memberRounds()
+{
+}
+
+RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr)
+: m_state(State::NEW)
+, m_networkConfigPtr(networkConfigPtr)
+, m_currentRound(-1)
 , m_roundsInB(0)
 , m_roundsInC(0)
 , m_memberRounds()
 {
-
 }
 
-void RumorStateMachine::rumorReceived(int memberId, int theirRound)
+RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr,
+                                     int fromMember,
+                                     int theirRound)
+: m_state(State::NEW)
+  , m_networkConfigPtr(networkConfigPtr)
+  , m_currentRound(-1)
+  , m_roundsInB(0)
+  , m_roundsInC(0)
+  , m_memberRounds()
 {
     // Maximum number of rounds reached
-    if (theirRound > m_networkConfigRef.maxRoundsTotal()) {
-        m_state = State::OLD;
-        m_currentRound = 0;
-        m_memberRounds.clear();
+    if (theirRound > m_networkConfigPtr->maxRoundsTotal()) {
+        advanceOld();
         return;
     }
 
     // Stay in B-m state
-    m_state = State::NEW;
+    m_memberRounds[fromMember] = theirRound;
+}
 
-    if (m_memberRounds.count(memberId) > 0) {
-        //TODO: handle unexpected case
+void RumorStateMachine::rumorReceived(int memberId, int theirRound)
+{
+    if (m_state == NEW) {
+        if (m_memberRounds.count(memberId) > 0) {
+            // TODO: handle duplicate message received from 'memberId'
+        }
+        m_memberRounds[memberId] = theirRound;
     }
-    m_memberRounds[memberId] = theirRound;
 }
 
 void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurrentRound)
@@ -87,10 +119,10 @@ void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurre
     m_currentRound++;
     switch(m_state) {
         case NEW:
-            newHandler(peersInCurrentRound);
+            advanceNew(peersInCurrentRound);
             return;
         case KNOWN:
-            knownHandler();
+            advanceKnown();
             return;
         default:
             // TODO: decide error handling strategy
@@ -101,6 +133,11 @@ void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurre
 const RumorStateMachine::State RumorStateMachine::state() const
 {
     return m_state;
+}
+
+const int RumorStateMachine::currentRound() const
+{
+    return m_currentRound;
 }
 
 } // project namespace

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <ostream>
 
 namespace RRS {
 
@@ -33,6 +34,8 @@ class Message {
     bool operator==(const Message& other) const;
 
     bool operator!=(const Message& other) const;
+
+    friend std::ostream& operator<<(std::ostream& os, const Message& message);
 
     // CONST METHODS
     Type type() const;

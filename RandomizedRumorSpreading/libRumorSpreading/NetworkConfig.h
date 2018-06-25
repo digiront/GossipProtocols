@@ -25,9 +25,6 @@ class NetworkConfig {
     // 'cold'. Can be configured. Specified in the paper as `O(ln(n))`.
     int m_maxRoundsTotal;
 
-    // Each peer can store an arbitrary number of statistics. Not used for now.
-    std::unordered_map<std::string, double> m_statistics;
-
   public:
     // CONSTRUCTORS
     // Create a NetworkConfig instance with the default initialization based on theory.
@@ -37,7 +34,7 @@ class NetworkConfig {
     NetworkConfig(int networkSize, int maxRoundsInB, int maxRoundsInC, int maxRoundsTotal);
 
     // METHODS
-    std::unordered_map<std::string, double>& statistics();
+    void increaseStatValue(const std::string& key, double value);
 
     // CONST METHODS
     int networkSize() const;

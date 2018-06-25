@@ -41,4 +41,11 @@ int Message::round() const
     return m_round;
 }
 
+std::ostream& operator<<(std::ostream& os, const Message& message)
+{
+    os << "[ type: " << message.m_type << " rumorId: " << message.m_rumorId << " round: "
+       << message.m_round << "]";
+    return os;
+}
+
 } // project namespace

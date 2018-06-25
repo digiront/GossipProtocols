@@ -3,11 +3,6 @@
 namespace RRS {
 
 // PRIVATE METHODS
-void RumorStateMachine::handleNewRumor()
-{
-
-}
-
 void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound)
 {
     m_roundsInB++;
@@ -60,7 +55,7 @@ void RumorStateMachine::advanceOld()
 {
     m_state = OLD;
     m_memberRounds.clear();
-    m_currentRound = -1;
+    m_currentRound = m_networkConfigPtr->maxRoundsTotal() + 1;
 }
 
 // CONSTRUCTORS
@@ -77,7 +72,7 @@ RumorStateMachine::RumorStateMachine()
 RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr)
 : m_state(State::NEW)
 , m_networkConfigPtr(networkConfigPtr)
-, m_currentRound(-1)
+, m_currentRound(0)
 , m_roundsInB(0)
 , m_roundsInC(0)
 , m_memberRounds()
@@ -89,7 +84,7 @@ RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr,
                                      int theirRound)
 : m_state(State::NEW)
   , m_networkConfigPtr(networkConfigPtr)
-  , m_currentRound(-1)
+  , m_currentRound(0)
   , m_roundsInB(0)
   , m_roundsInC(0)
   , m_memberRounds()

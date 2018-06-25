@@ -17,9 +17,8 @@ int main (int argc, char *argv[]) {
     }
 
     std::unordered_set<RumorMember, MemberHash> members;
-    int i = 0;
     for (auto i : peers) {
-        members.insert({i++, peers});
+        members.insert({peers, i});
     }
 
     std::cout << "DONE" << std::endl;

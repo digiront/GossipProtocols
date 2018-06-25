@@ -13,7 +13,7 @@ class RumorStateMachine {
   public:
     // ENUMS
     enum State {
-        UNDEFINED, // initial state where the peer 'v' doesn't know about the rumor 'r'
+        UNKNOWN,   // initial state where the peer 'v' doesn't know about the rumor 'r'
         NEW,       // the peer 'v' knows 'r' and counter(v,r) = m
         KNOWN,     // cooling state, stay in this state for a 'm_maxRounds' rounds
         OLD,       // final state, member stops participating in rumor spreading
@@ -30,8 +30,6 @@ class RumorStateMachine {
     std::unordered_map<int, int> m_memberRounds; // Member ID --> round
 
     // METHODS
-    void handleNewRumor();
-
     void advanceNew(const std::unordered_set<int>& membersInRound);
 
     void advanceKnown();

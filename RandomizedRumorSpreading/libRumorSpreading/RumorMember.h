@@ -36,7 +36,7 @@ class RumorMember : public RumorSpreadingInterface {
     std::unordered_set<int>                    m_peersInCurrentRound;
     std::unordered_map<int, RumorStateMachine> m_rumors;
     std::mutex                                 m_mutex;
-    std::unordered_map<StatisticKey, double>   m_statistics;
+    std::map<StatisticKey, double>             m_statistics;
 
     // METHODS
     void increaseStatValue(StatisticKey key, double value);
@@ -69,7 +69,7 @@ class RumorMember : public RumorSpreadingInterface {
 
     bool done(int rumorId) const;
 
-    const std::unordered_map<StatisticKey, double>& statistics() const;
+    const std::map<StatisticKey, double>& statistics() const;
 
     std::ostream& printStatistics(std::ostream& outStream) const;
 

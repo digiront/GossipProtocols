@@ -139,8 +139,8 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
     increaseStatValue(Rounds, 1);
 
     // Choose a random member
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, m_peers.size() - 1);
     int toMember = m_peers[dis(gen)];
 
@@ -179,7 +179,7 @@ int RumorMember::numRumors() const
     return m_rumors.size();
 }
 
-const std::unordered_map<RumorMember::StatisticKey, double>& RumorMember::statistics() const
+const std::map<RumorMember::StatisticKey, double>& RumorMember::statistics() const
 {
     return m_statistics;
 }
@@ -200,6 +200,7 @@ std::ostream& RumorMember::printStatistics(std::ostream& outStream) const
         outStream << "  " << s_enumKeyToString.at(stat.first) << ": " << stat.second << "\n";
     }
     outStream << "}]" << std::endl;
+    return outStream;
 }
 
 // OPERATORS

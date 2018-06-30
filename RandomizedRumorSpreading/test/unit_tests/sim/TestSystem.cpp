@@ -137,6 +137,7 @@ TEST(SystemTest, Smoke)
 {
     for (int i = 0; i < 10; ++i)
     {
+        int numPeers = 8;
         const Time t0 = Time(duration<unsigned>(START_TIME));
         System system = System(8);
 
@@ -165,13 +166,19 @@ TEST(SystemTest, Smoke)
         sim.runTo(t0 + 1000 * sec);
 
         EXPECT_TRUE(system.allRumorsOld());
-        EXPECT_GT(system.pushMessageCount, 47);
-        EXPECT_LT(system.pushMessageCount, 50);
-        EXPECT_GT(system.pullMessageCount, 30);
-        EXPECT_LT(system.pullMessageCount, 50);
-        EXPECT_EQ(system.epochCount, 1592);
+
         EXPECT_GT(checkAllDone.completedAtSeconds, 20);
         EXPECT_LT(checkAllDone.completedAtSeconds, 80);
+
+        int peersSquared = numPeers * numPeers;
+        EXPECT_GT(system.pushMessageCount, 0);
+        EXPECT_LT(system.pushMessageCount, peersSquared);
+
+        EXPECT_GT(system.pullMessageCount, 0);
+        EXPECT_LT(system.pullMessageCount, peersSquared);
+
+        EXPECT_EQ(system.epochCount, 1592);
+
     }
 }
 

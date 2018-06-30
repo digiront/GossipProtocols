@@ -58,6 +58,10 @@ struct System {
         auto isRumorOld = [&](int rumorId) -> bool
         {
             for (const auto& kv : m_members) {
+                if (!kv.second.rumorExists(rumorId)) {
+                    continue;
+                }
+
                 if (!kv.second.isOld(rumorId)) {
                     return false;
                 }
@@ -135,7 +139,7 @@ public:
 
 TEST(SystemTest, Smoke)
 {
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         int numPeers = 8;
         const Time t0 = Time(duration<unsigned>(START_TIME));
@@ -167,7 +171,7 @@ TEST(SystemTest, Smoke)
 
         EXPECT_TRUE(system.allRumorsOld());
 
-        EXPECT_GT(checkAllDone.completedAtSeconds, 20);
+        EXPECT_GT(checkAllDone.completedAtSeconds, 14);
         EXPECT_LT(checkAllDone.completedAtSeconds, 80);
 
         int peersSquared = numPeers * numPeers;

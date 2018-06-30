@@ -111,6 +111,10 @@ const std::unordered_map<int, RRS::RumorMember>& TestProtocol::members() const
 bool TestProtocol::isRumorOld(int rumorId) const
 {
     for (const auto& kv : m_members) {
+        if (!kv.second.rumorExists(rumorId)) {
+            continue;
+        }
+
         if (!kv.second.isOld(rumorId)) {
             return false;
         }

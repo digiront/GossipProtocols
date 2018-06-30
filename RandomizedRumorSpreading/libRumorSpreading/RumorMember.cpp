@@ -195,6 +195,12 @@ const std::map<RumorMember::StatisticKey, double>& RumorMember::statistics() con
     return m_statistics;
 }
 
+bool RumorMember::rumorExists(int rumorId) const
+{
+    std::lock_guard<std::mutex> guard(m_mutex); // critical section
+    return m_rumors.count(rumorId) > 0;
+}
+
 bool RumorMember::isOld(int rumorId) const
 {
     std::lock_guard<std::mutex> guard(m_mutex); // critical section

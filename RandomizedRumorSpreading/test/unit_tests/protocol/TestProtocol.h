@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-class TestProtocol : public ::testing::Test {
+class TestProtocol {
   private:
     std::unordered_set<int>                   m_peerIds;
     std::unordered_map<int, RRS::RumorMember> m_members;
@@ -21,9 +21,9 @@ class TestProtocol : public ::testing::Test {
 
     void handleMessage(int fromMember, int toMember, const RRS::Message& msg);
 
-  protected:
+  public:
 
-    TestProtocol();
+    TestProtocol(int numPeers);
 
     virtual ~TestProtocol();
 

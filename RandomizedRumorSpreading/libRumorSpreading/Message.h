@@ -42,7 +42,7 @@ class Message {
 
     int rumorId() const;
 
-    int round() const;
+    int age() const;
 };
 
 } // project namespace

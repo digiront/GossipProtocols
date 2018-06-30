@@ -1,8 +1,8 @@
+#include <chrono>
 #include <RumorMember.h>
 #include <Message.h>
 
 #include "gtest/gtest.h"
-
 #include "Sim.h"
 
 using namespace std::placeholders;
@@ -15,13 +15,12 @@ const unsigned START_TIME = 0;
 
 const seconds sec(1);
 
-int toSeconds(const Time& now)
+long toSeconds(const Time& now)
 {
     return duration_cast<seconds>(now.time_since_epoch()).count();
 }
 
-struct System
-{
+struct System {
     std::unordered_map<int, RRS::RumorMember> m_members;
     std::vector<int>                          m_rumors;
     int pushMessageCount = 0;
@@ -30,7 +29,7 @@ struct System
 
     std::function<void(Time now, int from, int to, const Message& msg)> send;
 
-    System(int numOfPeers)
+    explicit System(int numOfPeers)
     {
         std::unordered_set<int> peerIds;
 
@@ -118,10 +117,12 @@ class CheckAllDone {
 
     System& system;
 public:
-    int completedAtSeconds = 0;
+    long completedAtSeconds = 0;
 
-    CheckAllDone(System& _system)
-            : system(_system) {}
+    explicit CheckAllDone(System& _system)
+    : system(_system)
+    {
+    }
 
     void operator() (Time now)
     {
@@ -137,7 +138,6 @@ TEST(SystemTest, Smoke)
     for (int i = 0; i < 10; ++i)
     {
         const Time t0 = Time(duration<unsigned>(START_TIME));
-
         System system = System(8);
 
         Sim sim;
@@ -172,5 +172,17 @@ TEST(SystemTest, Smoke)
         EXPECT_EQ(system.epochCount, 1592);
         EXPECT_GT(checkAllDone.completedAtSeconds, 20);
         EXPECT_LT(checkAllDone.completedAtSeconds, 80);
+
+        std::cout << "Member statistics:" << std::endl;
+        for (const auto& kv : system.m_members) {
+            kv.second.printStatistics(std::cout);
+        }
     }
+}
+
+int main(int argc, char **argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    int ret = RUN_ALL_TESTS();
+    return ret;
 }

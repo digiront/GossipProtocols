@@ -5,4 +5,5 @@
 
 ### TODOs
 
+* Tests that without randomness
 * Implement anti-entropy mechanism. One way to do this is to periodically exchange rumor set with a random peer. Then, if there are missing rumors, start spreading them.

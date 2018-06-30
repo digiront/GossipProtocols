@@ -68,6 +68,8 @@ class RumorMember : public RumorSpreadingInterface {
 
     const std::unordered_map<int, RumorStateMachine>& rumorsMap() const;
 
+    bool rumorExists(int rumorId) const;
+
     bool isOld(int rumorId) const;
 
     const std::map<StatisticKey, double>& statistics() const;

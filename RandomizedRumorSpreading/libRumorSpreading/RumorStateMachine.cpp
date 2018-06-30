@@ -1,6 +1,18 @@
 #include "RumorStateMachine.h"
 
+#define LITERAL(s) #s
+
 namespace RRS {
+
+// STATIC MEMBERS
+std::map<RumorStateMachine::State, std::string> RumorStateMachine::s_enumKeyToString = {
+    {UNKNOWN,    LITERAL(UNKNOWN)},
+    {NEW,        LITERAL(NEW)},
+    {KNOWN,      LITERAL(KNOWN)},
+    {OLD,        LITERAL(OLD)},
+    {NUM_STATES, LITERAL(NUM_STATES)}
+};
+
 
 // PRIVATE METHODS
 void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound)
@@ -22,11 +34,9 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
         int theirRound = entry.second;
         if (theirRound < m_currentRound) {
             numLess++;
-        }
-        else if (theirRound >= m_networkConfigPtr->maxRoundsInB()) {
+        } else if (theirRound >= m_networkConfigPtr->maxRoundsInB()) {
             m_state = KNOWN;
-        }
-        else {
+        } else {
             numGreaterOrEqual++;
         }
     }
@@ -55,13 +65,13 @@ void RumorStateMachine::advanceOld()
 {
     m_state = OLD;
     m_memberRounds.clear();
-    m_currentRound = m_networkConfigPtr->maxRoundsTotal() + 1;
+    //m_currentRound = m_networkConfigPtr->maxRoundsTotal() + 1;
 }
 
 // CONSTRUCTORS
 RumorStateMachine::RumorStateMachine()
 : m_state(State::NEW)
-  , m_networkConfigPtr(0)
+  , m_networkConfigPtr(nullptr)
   , m_currentRound(-1)
   , m_roundsInB(-1)
   , m_roundsInC(-1)
@@ -71,11 +81,11 @@ RumorStateMachine::RumorStateMachine()
 
 RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr)
 : m_state(State::NEW)
-, m_networkConfigPtr(networkConfigPtr)
-, m_currentRound(0)
-, m_roundsInB(0)
-, m_roundsInC(0)
-, m_memberRounds()
+  , m_networkConfigPtr(networkConfigPtr)
+  , m_currentRound(0)
+  , m_roundsInB(0)
+  , m_roundsInC(0)
+  , m_memberRounds()
 {
 }
 
@@ -112,7 +122,7 @@ void RumorStateMachine::rumorReceived(int memberId, int theirRound)
 void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurrentRound)
 {
     m_currentRound++;
-    switch(m_state) {
+    switch (m_state) {
         case NEW:
             advanceNew(peersInCurrentRound);
             return;
@@ -138,6 +148,16 @@ const int RumorStateMachine::age() const
 const bool RumorStateMachine::isOld() const
 {
     return m_state == OLD;
+}
+
+std::ostream& operator<<(std::ostream& os, const RumorStateMachine& machine)
+{
+    os << "{ state: " << RumorStateMachine::s_enumKeyToString[machine.m_state]
+       << ", currentRound: " << machine.m_currentRound
+       << ", roundsInB: " << machine.m_roundsInB
+       << ", roundsInC: " << machine.m_roundsInC
+       << "}";
+    return os;
 }
 
 } // project namespace

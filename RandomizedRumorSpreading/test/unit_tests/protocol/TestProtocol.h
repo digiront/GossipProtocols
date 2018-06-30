@@ -46,6 +46,8 @@ class TestProtocol {
     bool allRumorsOld() const;
 
     const std::chrono::milliseconds& tickInterval() const;
+
+    std::ostream& printRumorState(std::ostream& outStream) const;
 };
 
 #endif //RANDOMIZEDRUMORSPREADING_TESTPROTOCOL_H

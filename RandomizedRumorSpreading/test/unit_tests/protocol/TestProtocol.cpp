@@ -27,7 +27,7 @@ TestProtocol::TestProtocol(int numPeers)
 , m_members()
 , m_StringToRumorId()
 , m_rumorIdToStringPtr()
-, m_tickInterval(500)
+, m_tickInterval(100)
 {
     constructNetwork(numPeers);
 }
@@ -111,7 +111,7 @@ const std::unordered_map<int, RRS::RumorMember>& TestProtocol::members() const
 bool TestProtocol::isRumorOld(int rumorId) const
 {
     for (const auto& kv : m_members) {
-        if (!kv.second.done(rumorId)) {
+        if (!kv.second.isOld(rumorId)) {
             return false;
         }
     }
@@ -127,9 +127,27 @@ bool TestProtocol::allRumorsOld() const
     }
     return true;
 }
+
 const std::chrono::milliseconds& TestProtocol::tickInterval() const
 {
     return m_tickInterval;
+}
+
+std::ostream& TestProtocol::printRumorState(std::ostream& outStream) const
+{
+    typedef std::unordered_map<int, RumorStateMachine> RumorsMap;
+    for (const auto& kv : m_members) {
+        const int memberId = kv.first;
+        const RumorsMap& rumorsMap = kv.second.rumorsMap();
+        for (const auto& kv2 : rumorsMap) {
+            const int rumorId = kv2.first;
+            outStream << "\n{ MemberId: " << memberId
+                      << ", RumorId: " << rumorId
+                      << ", State: " << kv2.second
+                      << "}";
+        }
+    }
+    return outStream;
 }
 
 // *** TEST CASES ***
@@ -138,22 +156,22 @@ TEST(TestProtocol, Spread_One_Rumor)
     std::mutex mutex;
     std::condition_variable cond_var;
 
-    TestProtocol obj(8);
+    TestProtocol testObj(8);
     // Add rumor and map it to an int
-    obj.insertRumor(0, "Are Eminem and Nicki Minaj an item, or are they messing with us?");
+    testObj.insertRumor(0, "Are Eminem and Nicki Minaj an item, or are they messing with us?");
 
     // First member will be the first one to start spreading the rumor
-    obj.addRumor(0, 0);
+    testObj.addRumor(0, 0);
 
     // Schedule periodic ticks
     std::thread([&]()
     {
-        while (!obj.allRumorsOld()) {
-            obj.tick();
-            std::this_thread::sleep_for(obj.tickInterval());
+        while (!testObj.allRumorsOld()) {
+            testObj.tick();
+            std::this_thread::sleep_for(testObj.tickInterval());
         }
 
-        // mark as done and signal to exit
+        // mark as isOld and signal to exit
         std::lock_guard<std::mutex> lock(mutex);
         cond_var.notify_one();
     }).detach();
@@ -161,9 +179,9 @@ TEST(TestProtocol, Spread_One_Rumor)
     // Schedule timeout
     std::thread([&]()
     {
-        int lnn = std::ceil(std::log(obj.peers().size()));
+        int lnn = std::ceil(std::log(testObj.peers().size()));
         std::this_thread::sleep_for(
-                                 std::chrono::milliseconds(2 * lnn * obj.tickInterval()));
+                                 std::chrono::milliseconds(2 * lnn * testObj.tickInterval()));
         std::lock_guard<std::mutex> lock(mutex);
         cond_var.notify_one();
     }).detach();
@@ -171,12 +189,16 @@ TEST(TestProtocol, Spread_One_Rumor)
     {
         std::unique_lock<std::mutex> lock(mutex);
         cond_var.wait(lock);
-        EXPECT_TRUE(obj.allRumorsOld());
+        EXPECT_TRUE(testObj.allRumorsOld());
 
-        std::cout << "Member statistics:" << std::endl;
-        for (const auto& kv : obj.members()) {
-            kv.second.printStatistics(std::cout);
+        std::cout << "Rumor/Peer state:\n[";
+        testObj.printRumorState(std::cout) << "\n]\n" << std::endl;
+
+        std::cout << "Member statistics: [" << std::endl;
+        for (const auto& kv : testObj.members()) {
+            kv.second.printStatistics(std::cout) << "\n";
         }
+        std::cout << "]" << std::endl;
     }
 }
 

@@ -58,7 +58,7 @@ struct System {
         auto isRumorOld = [&](int rumorId) -> bool
         {
             for (const auto& kv : m_members) {
-                if (!kv.second.done(rumorId)) {
+                if (!kv.second.isOld(rumorId)) {
                     return false;
                 }
             }
@@ -165,18 +165,13 @@ TEST(SystemTest, Smoke)
         sim.runTo(t0 + 1000 * sec);
 
         EXPECT_TRUE(system.allRumorsOld());
-        EXPECT_GT(system.pushMessageCount, 1550);
-        EXPECT_LT(system.pushMessageCount, 1580);
-        EXPECT_GT(system.pullMessageCount, 1430);
-        EXPECT_LT(system.pullMessageCount, 1510);
+        EXPECT_GT(system.pushMessageCount, 47);
+        EXPECT_LT(system.pushMessageCount, 50);
+        EXPECT_GT(system.pullMessageCount, 30);
+        EXPECT_LT(system.pullMessageCount, 50);
         EXPECT_EQ(system.epochCount, 1592);
         EXPECT_GT(checkAllDone.completedAtSeconds, 20);
         EXPECT_LT(checkAllDone.completedAtSeconds, 80);
-
-        std::cout << "Member statistics:" << std::endl;
-        for (const auto& kv : system.m_members) {
-            kv.second.printStatistics(std::cout);
-        }
     }
 }
 

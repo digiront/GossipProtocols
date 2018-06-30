@@ -100,31 +100,33 @@ std::pair<int, std::vector<Message>> RumorMember::receivedMessage(const Message&
     if (isNewPeer && message.type() == Message::PUSH) {
         for (auto& kv : m_rumors) {
             RumorStateMachine& stateMach = kv.second;
-            if (stateMach.currentRound() >= 0) {
-                pullMessages.push_back({ Message::PULL, kv.first, kv.second.currentRound() });
+            if (stateMach.age() >= 0) {
+                pullMessages.emplace_back(Message(Message::PULL, kv.first, kv.second.age()));
             }
         }
 
         // No PULL messages to sent i.e. no rumors received yet
         if (pullMessages.empty()) {
-            pullMessages.push_back({ Message::PULL, -1, 0 });
+            pullMessages.emplace_back(Message(Message::PULL, -1, 0));
             increaseStatValue(NumEmptyPullMessages, 1);
+        }
+        else {
+            increaseStatValue(NumPullMessages, pullMessages.size());
         }
     }
 
     // An empty response from a peer that was sent a PULL
     const int receivedRumorId = message.rumorId();
-    const int theirRound = message.round();
+    const int theirRound = message.age();
     if (receivedRumorId >= 0) {
         if (m_rumors.count(receivedRumorId) > 0) {
-            m_rumors[receivedRumorId].rumorReceived(fromPeer, message.round());
+            m_rumors[receivedRumorId].rumorReceived(fromPeer, message.age());
         }
         else {
             m_rumors[receivedRumorId] = RumorStateMachine(&m_networkConfig, fromPeer, theirRound);
         }
     }
 
-    increaseStatValue(NumPullMessages, pullMessages.size());
     return std::make_pair(fromPeer, pullMessages);
 }
 
@@ -132,7 +134,7 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
 {
     std::lock_guard<std::mutex> guard(m_mutex); // critical section
 
-    if(m_rumors.size() == 0) {
+    if(m_rumors.empty()) {
         return std::pair<int, std::vector<Message>>();
     }
 
@@ -150,15 +152,15 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
     for (auto& kv : m_rumors) {
         RumorStateMachine& stateMach = kv.second;
         stateMach.advanceRound(m_peersInCurrentRound);
-        if (stateMach.currentRound() >= 0) {
-            pushMessages.push_back({ Message::PUSH, kv.first, kv.second.currentRound() });
+        if (stateMach.age() >= 0) {
+            pushMessages.emplace_back(Message(Message::PUSH, kv.first, kv.second.age()));
         }
     }
     increaseStatValue(NumPushMessages, pushMessages.size());
 
     // No PUSH messages but still want to sent a response to peer.
     if (pushMessages.empty()) {
-        pushMessages.push_back({ Message::PUSH, -1, 0 });
+        pushMessages.emplace_back(Message(Message::PUSH, -1, 0));
         increaseStatValue(NumEmptyPushMessages, 1);
     }
 
@@ -188,7 +190,7 @@ bool RumorMember::done(int rumorId) const
 {
     const auto& iter = m_rumors.find(rumorId);
     if (iter != m_rumors.end()) {
-        return iter->second.state() == RumorStateMachine::OLD;
+        return iter->second.isOld();
     }
     return false;
 }

@@ -22,14 +22,14 @@ void TestProtocol::constructNetwork(int numOfPeers)
     }
 }
 
-TestProtocol::TestProtocol()
+TestProtocol::TestProtocol(int numPeers)
 : m_peerIds()
 , m_members()
 , m_StringToRumorId()
 , m_rumorIdToStringPtr()
 , m_tickInterval(500)
 {
-    constructNetwork(8);
+    constructNetwork(numPeers);
 }
 
 TestProtocol::~TestProtocol()
@@ -133,24 +133,24 @@ const std::chrono::milliseconds& TestProtocol::tickInterval() const
 }
 
 // *** TEST CASES ***
-TEST_F(TestProtocol, Spread_One_Rumor)
+TEST(TestProtocol, Spread_One_Rumor)
 {
     std::mutex mutex;
     std::condition_variable cond_var;
 
+    TestProtocol obj(8);
     // Add rumor and map it to an int
-    clear();
-    insertRumor(0, "Are Eminem and Nicki Minaj an item, or are they messing with us?");
+    obj.insertRumor(0, "Are Eminem and Nicki Minaj an item, or are they messing with us?");
 
     // First member will be the first one to start spreading the rumor
-    addRumor(0, 0);
+    obj.addRumor(0, 0);
 
     // Schedule periodic ticks
     std::thread([&]()
     {
-        while (!allRumorsOld()) {
-            tick();
-            std::this_thread::sleep_for(tickInterval());
+        while (!obj.allRumorsOld()) {
+            obj.tick();
+            std::this_thread::sleep_for(obj.tickInterval());
         }
 
         // mark as done and signal to exit
@@ -161,9 +161,9 @@ TEST_F(TestProtocol, Spread_One_Rumor)
     // Schedule timeout
     std::thread([&]()
     {
-        int lnn = std::ceil(std::log(peers().size()));
+        int lnn = std::ceil(std::log(obj.peers().size()));
         std::this_thread::sleep_for(
-                                 std::chrono::milliseconds(2 * lnn * tickInterval()));
+                                 std::chrono::milliseconds(2 * lnn * obj.tickInterval()));
         std::lock_guard<std::mutex> lock(mutex);
         cond_var.notify_one();
     }).detach();
@@ -171,11 +171,18 @@ TEST_F(TestProtocol, Spread_One_Rumor)
     {
         std::unique_lock<std::mutex> lock(mutex);
         cond_var.wait(lock);
-        EXPECT_TRUE(allRumorsOld());
+        EXPECT_TRUE(obj.allRumorsOld());
 
         std::cout << "Member statistics:" << std::endl;
-        for (const auto& kv : members()) {
+        for (const auto& kv : obj.members()) {
             kv.second.printStatistics(std::cout);
         }
     }
+}
+
+int main(int argc, char **argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    int ret = RUN_ALL_TESTS();
+    return ret;
 }

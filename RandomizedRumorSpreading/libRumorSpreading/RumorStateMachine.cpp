@@ -15,7 +15,7 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
         if (m_memberRounds.count(id) <= 0) m_memberRounds[id] = 0;
     }
 
-    // Compare our round to the majority of rounds
+    // Compare our age to the majority of rounds
     int numLess = 0;
     int numGreaterOrEqual = 0;
     for (const auto entry : m_memberRounds) {
@@ -130,9 +130,14 @@ const RumorStateMachine::State RumorStateMachine::state() const
     return m_state;
 }
 
-const int RumorStateMachine::currentRound() const
+const int RumorStateMachine::age() const
 {
     return m_currentRound;
+}
+
+const bool RumorStateMachine::isOld() const
+{
+    return m_state == OLD;
 }
 
 } // project namespace

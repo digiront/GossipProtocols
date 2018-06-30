@@ -4,7 +4,8 @@
 namespace RRS {
 
 Message::Message()
-{}
+{
+}
 
 Message::Message(Message::Type type,
                  int rumorId,
@@ -12,7 +13,8 @@ Message::Message(Message::Type type,
 : m_type(type)
 , m_rumorId(rumorId)
 , m_round(round)
-{}
+{
+}
 
 bool Message::operator==(const Message& other) const
 {
@@ -36,14 +38,14 @@ int Message::rumorId() const
     return m_rumorId;
 }
 
-int Message::round() const
+int Message::age() const
 {
     return m_round;
 }
 
 std::ostream& operator<<(std::ostream& os, const Message& message)
 {
-    os << "[ type: " << message.m_type << " rumorId: " << message.m_rumorId << " round: "
+    os << "[ type: " << message.m_type << " rumorId: " << message.m_rumorId << " age: "
        << message.m_round << "]";
     return os;
 }

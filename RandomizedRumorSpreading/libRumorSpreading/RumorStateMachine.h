@@ -2,9 +2,11 @@
 #define RANDOMIZEDRUMORSPREADING_MESSAGESTATE_H
 
 #include <array>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
+#include <ostream>
 #include "NetworkConfig.h"
 
 namespace RRS {
@@ -19,6 +21,8 @@ class RumorStateMachine {
         OLD,       // final state, member stops participating in rumor spreading
         NUM_STATES
     };
+
+    static std::map<State, std::string> s_enumKeyToString;
 
   private:
     // MEMBERS
@@ -72,6 +76,8 @@ class RumorStateMachine {
     const int age() const;
 
     const bool isOld() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const RumorStateMachine& machine);
 };
 
 } // project namespace

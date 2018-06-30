@@ -89,7 +89,8 @@ bool RumorMember::addRumor(int rumorId)
     return m_rumors.insert(std::make_pair(rumorId, &m_networkConfig)).second;
 }
 
-std::pair<int, std::vector<Message>> RumorMember::receivedMessage(const Message& message, int fromPeer)
+std::pair<int, std::vector<Message>>
+RumorMember::receivedMessage(const Message& message, int fromPeer)
 {
     std::lock_guard<std::mutex> guard(m_mutex); // critical section
 
@@ -139,6 +140,10 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
     }
 
     increaseStatValue(Rounds, 1);
+    // TODO: Figure out heuristic to stop advancing (or/and add a timeout)
+    if (m_statistics[Rounds] > 2 * m_networkConfig.maxRoundsTotal()) {
+        return std::pair<int, std::vector<Message>>();
+    }
 
     // Choose a random member
     static std::random_device rd;
@@ -148,7 +153,6 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
 
     // Construct the push messages
     std::vector<Message> pushMessages;
-
     for (auto& kv : m_rumors) {
         RumorStateMachine& stateMach = kv.second;
         stateMach.advanceRound(m_peersInCurrentRound);
@@ -176,9 +180,9 @@ int RumorMember::id() const
     return m_id;
 }
 
-int RumorMember::numRumors() const
+const std::unordered_map<int, RumorStateMachine>& RumorMember::rumorsMap() const
 {
-    return m_rumors.size();
+    return m_rumors;
 }
 
 const std::map<RumorMember::StatisticKey, double>& RumorMember::statistics() const
@@ -186,7 +190,7 @@ const std::map<RumorMember::StatisticKey, double>& RumorMember::statistics() con
     return m_statistics;
 }
 
-bool RumorMember::done(int rumorId) const
+bool RumorMember::isOld(int rumorId) const
 {
     const auto& iter = m_rumors.find(rumorId);
     if (iter != m_rumors.end()) {
@@ -197,11 +201,11 @@ bool RumorMember::done(int rumorId) const
 
 std::ostream& RumorMember::printStatistics(std::ostream& outStream) const
 {
-    outStream << "[ " << m_id << ": {" << "\n";
+    outStream << m_id << ": {" << "\n";
     for (const auto& stat : m_statistics) {
         outStream << "  " << s_enumKeyToString.at(stat.first) << ": " << stat.second << "\n";
     }
-    outStream << "}]" << std::endl;
+    outStream << "}";
     return outStream;
 }
 

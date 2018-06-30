@@ -35,7 +35,8 @@ class RumorMember : public RumorSpreadingInterface {
     std::vector<int>                           m_peers;
     std::unordered_set<int>                    m_peersInCurrentRound;
     std::unordered_map<int, RumorStateMachine> m_rumors;
-    std::mutex                                 m_mutex;
+    std::unordered_set<int>                    m_oldRumors;
+    mutable std::mutex                         m_mutex;
     std::map<StatisticKey, double>             m_statistics;
 
     // METHODS
@@ -78,7 +79,7 @@ class RumorMember : public RumorSpreadingInterface {
 
 // Required by std::unordered_set
 struct MemberHash {
-    size_t operator() (const RumorMember& obj) const;
+    int operator() (const RumorMember& obj) const;
 };
 
 } // project namespace

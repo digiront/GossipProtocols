@@ -75,8 +75,8 @@ RumorMember::RumorMember(const RumorMember& other)
 }
 
 RumorMember::RumorMember(RumorMember&& other)
-: m_id(std::move(other.m_id))
-, m_networkConfig(std::move(other.m_networkConfig))
+: m_id(other.m_id)
+, m_networkConfig(other.m_networkConfig)
 , m_peers(std::move(other.m_peers))
 , m_rumors(std::move(other.m_rumors))
 , m_mutex()
@@ -139,11 +139,11 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
         return std::pair<int, std::vector<Message>>();
     }
 
-    increaseStatValue(Rounds, 1);
-    // TODO: Figure out heuristic to stop advancing (or/and add a timeout)
-    if (m_statistics[Rounds] > 2 * m_networkConfig.maxRoundsTotal()) {
+    // This is a heuristic to determine if this Rumor Spreading instance is too old
+    if (m_statistics[Rounds] >= 2 * m_networkConfig.maxRoundsTotal()) {
         return std::pair<int, std::vector<Message>>();
     }
+    increaseStatValue(Rounds, 1);
 
     // Choose a random member
     static std::random_device rd;
@@ -152,15 +152,20 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
     int toMember = m_peers[dis(gen)];
 
     // Construct the push messages
+    std::vector<int> oldRumorIds;
     std::vector<Message> pushMessages;
     for (auto& kv : m_rumors) {
         RumorStateMachine& stateMach = kv.second;
         stateMach.advanceRound(m_peersInCurrentRound);
-        if (stateMach.age() >= 0) {
-            pushMessages.emplace_back(Message(Message::PUSH, kv.first, kv.second.age()));
-        }
+        pushMessages.emplace_back(Message(Message::PUSH, kv.first, kv.second.age()));
     }
     increaseStatValue(NumPushMessages, pushMessages.size());
+
+    // Move to old rumors
+    for (const int rId : oldRumorIds) {
+        m_rumors.erase(rId);
+        m_oldRumors.insert(rId);
+    }
 
     // No PUSH messages but still want to sent a response to peer.
     if (pushMessages.empty()) {
@@ -192,11 +197,14 @@ const std::map<RumorMember::StatisticKey, double>& RumorMember::statistics() con
 
 bool RumorMember::isOld(int rumorId) const
 {
+    std::lock_guard<std::mutex> guard(m_mutex); // critical section
+
     const auto& iter = m_rumors.find(rumorId);
     if (iter != m_rumors.end()) {
         return iter->second.isOld();
     }
-    return false;
+
+    return m_oldRumors.count(rumorId) > 0;
 }
 
 std::ostream& RumorMember::printStatistics(std::ostream& outStream) const
@@ -216,7 +224,7 @@ bool RumorMember::operator==(const RumorMember& other) const
 }
 
 // FREE OPERATORS
-size_t MemberHash::operator()(const RRS::RumorMember& obj) const
+int MemberHash::operator()(const RRS::RumorMember& obj) const
 {
     return obj.id();
 }

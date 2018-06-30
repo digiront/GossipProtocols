@@ -18,7 +18,7 @@ std::map<RumorStateMachine::State, std::string> RumorStateMachine::s_enumKeyToSt
 void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound)
 {
     m_roundsInB++;
-    if (m_currentRound >= m_networkConfigPtr->maxRoundsTotal()) {
+    if (m_age >= m_networkConfigPtr->maxRoundsTotal()) {
         advanceOld();
         return;
     }
@@ -32,7 +32,7 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
     int numGreaterOrEqual = 0;
     for (const auto entry : m_memberRounds) {
         int theirRound = entry.second;
-        if (theirRound < m_currentRound) {
+        if (theirRound < m_age) {
             numLess++;
         } else if (theirRound >= m_networkConfigPtr->maxRoundsInB()) {
             m_state = KNOWN;
@@ -54,7 +54,7 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
 void RumorStateMachine::advanceKnown()
 {
     m_roundsInC++;
-    if (m_currentRound >= m_networkConfigPtr->maxRoundsTotal() ||
+    if (m_age >= m_networkConfigPtr->maxRoundsTotal() ||
         m_roundsInC >= m_networkConfigPtr->maxRoundsInC()) {
         advanceOld();
     }
@@ -65,14 +65,13 @@ void RumorStateMachine::advanceOld()
 {
     m_state = OLD;
     m_memberRounds.clear();
-    //m_currentRound = m_networkConfigPtr->maxRoundsTotal() + 1;
 }
 
 // CONSTRUCTORS
 RumorStateMachine::RumorStateMachine()
-: m_state(State::NEW)
+: m_state(State::UNKNOWN)
   , m_networkConfigPtr(nullptr)
-  , m_currentRound(-1)
+  , m_age(-1)
   , m_roundsInB(-1)
   , m_roundsInC(-1)
   , m_memberRounds()
@@ -82,7 +81,7 @@ RumorStateMachine::RumorStateMachine()
 RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr)
 : m_state(State::NEW)
   , m_networkConfigPtr(networkConfigPtr)
-  , m_currentRound(0)
+  , m_age(0)
   , m_roundsInB(0)
   , m_roundsInC(0)
   , m_memberRounds()
@@ -94,7 +93,7 @@ RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr,
                                      int theirRound)
 : m_state(State::NEW)
   , m_networkConfigPtr(networkConfigPtr)
-  , m_currentRound(0)
+  , m_age(0)
   , m_roundsInB(0)
   , m_roundsInC(0)
   , m_memberRounds()
@@ -111,9 +110,10 @@ RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr,
 
 void RumorStateMachine::rumorReceived(int memberId, int theirRound)
 {
+    // Only care about other members when the rumor is NEW
     if (m_state == NEW) {
         if (m_memberRounds.count(memberId) > 0) {
-            // TODO: handle duplicate message received from 'memberId'
+            throw std::logic_error("Received a message from the same member within a single round");
         }
         m_memberRounds[memberId] = theirRound;
     }
@@ -121,7 +121,7 @@ void RumorStateMachine::rumorReceived(int memberId, int theirRound)
 
 void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurrentRound)
 {
-    m_currentRound++;
+    m_age++;
     switch (m_state) {
         case NEW:
             advanceNew(peersInCurrentRound);
@@ -129,9 +129,12 @@ void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurre
         case KNOWN:
             advanceKnown();
             return;
-        default:
-            // TODO: decide error handling strategy
+        case OLD:
+            m_age++;
             return;
+        case UNKNOWN:
+        default:
+            throw std::logic_error("Unexpected state: " + s_enumKeyToString[m_state]);
     }
 }
 
@@ -142,7 +145,7 @@ const RumorStateMachine::State RumorStateMachine::state() const
 
 const int RumorStateMachine::age() const
 {
-    return m_currentRound;
+    return m_age;
 }
 
 const bool RumorStateMachine::isOld() const
@@ -153,7 +156,7 @@ const bool RumorStateMachine::isOld() const
 std::ostream& operator<<(std::ostream& os, const RumorStateMachine& machine)
 {
     os << "{ state: " << RumorStateMachine::s_enumKeyToString[machine.m_state]
-       << ", currentRound: " << machine.m_currentRound
+       << ", currentRound: " << machine.m_age
        << ", roundsInB: " << machine.m_roundsInB
        << ", roundsInC: " << machine.m_roundsInC
        << "}";

@@ -28,7 +28,7 @@ class RumorStateMachine {
     // MEMBERS
     State                        m_state;
     const NetworkConfig*         m_networkConfigPtr;
-    int                          m_currentRound;
+    int                          m_age;
     int                          m_roundsInB;
     int                          m_roundsInC;
     std::unordered_map<int, int> m_memberRounds; // Member ID --> age

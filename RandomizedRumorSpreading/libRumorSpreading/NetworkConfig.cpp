@@ -4,20 +4,20 @@
 namespace RRS {
 
 // CONSTRUCTORS
-NetworkConfig::NetworkConfig(int numOfPeers)
+NetworkConfig::NetworkConfig(size_t numOfPeers)
 : m_networkSize(numOfPeers)
 , m_maxRoundsInB()
 , m_maxRoundsInC()
 , m_maxRoundsTotal()
 {
     // Refer to "Randomized Rumor Spreading" paper
-    int magicNumber = std::ceil(std::log(std::log(m_networkSize)));
+    int magicNumber = static_cast<int>(std::ceil(std::log(std::log(m_networkSize))));
     m_maxRoundsInB = std::max(1, magicNumber);
     m_maxRoundsInC = m_maxRoundsInB;
-    m_maxRoundsTotal = std::ceil(std::log(m_networkSize));
+    m_maxRoundsTotal = static_cast<int>(std::ceil(std::log(m_networkSize)));
 }
 
-NetworkConfig::NetworkConfig(int networkSize,
+NetworkConfig::NetworkConfig(size_t networkSize,
                              int maxRoundsInB,
                              int maxRoundsInC,
                              int maxRoundsTotal)
@@ -28,7 +28,7 @@ NetworkConfig::NetworkConfig(int networkSize,
 {}
 
 // PUBLIC CONST METHODS
-int NetworkConfig::networkSize() const
+size_t NetworkConfig::networkSize() const
 {
     return m_networkSize;
 }

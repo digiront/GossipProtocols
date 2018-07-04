@@ -54,7 +54,7 @@ class RumorMember : public RumorSpreadingInterface {
 
     RumorMember(const RumorMember& other);
 
-    RumorMember(RumorMember&& other);
+    RumorMember(RumorMember&& other) noexcept;
 
     // METHODS
     bool addRumor(int rumorId) override;

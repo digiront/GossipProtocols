@@ -11,19 +11,20 @@
 class TestProtocol {
   private:
     std::unordered_set<int>                   m_peerIds;
+    RRS::NetworkConfig                        m_networkConfig;
     std::unordered_map<int, RRS::RumorMember> m_members;
     std::map<std::string, int>                m_StringToRumorId;
     std::map<int, const std::string *>        m_rumorIdToStringPtr;
     std::chrono::milliseconds                 m_tickInterval;
     int                                       m_numTicks;
 
-    void constructNetwork(int numOfPeers);
+    void constructNetwork(size_t numOfPeers);
 
     void handleMessage(int fromMember, int toMember, const RRS::Message& msg);
 
   public:
 
-    TestProtocol(int numPeers);
+    TestProtocol(size_t numPeers);
 
     virtual ~TestProtocol();
 
@@ -38,6 +39,8 @@ class TestProtocol {
     int numTicks() const;
 
     const std::unordered_set<int>& peers() const;
+
+    const RRS::NetworkConfig networkConfig() const;
 
     const std::unordered_map<int, RRS::RumorMember>& members() const;
 

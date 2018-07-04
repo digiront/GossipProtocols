@@ -11,19 +11,20 @@
 
 using namespace RRS;
 
-void TestProtocol::constructNetwork(int numOfPeers)
+void TestProtocol::constructNetwork(size_t numOfPeers)
 {
     for (int i = 0; i < numOfPeers; ++i) {
         m_peerIds.insert(i);
     }
 
     for (auto i : m_peerIds) {
-        m_members.insert(std::make_pair(i, RumorMember(m_peerIds, i)));
+        m_members.insert(std::make_pair(i, RumorMember(m_peerIds, m_networkConfig)));
     }
 }
 
-TestProtocol::TestProtocol(int numPeers)
+TestProtocol::TestProtocol(size_t numPeers)
 : m_peerIds()
+, m_networkConfig(numPeers)
 , m_members()
 , m_StringToRumorId()
 , m_rumorIdToStringPtr()
@@ -79,12 +80,11 @@ void TestProtocol::tick()
 {
     m_numTicks++;
     for (auto& kv : m_members) {
+        int from = kv.first;
+
         std::pair<int, std::vector<Message>> roundResult = kv.second.advanceRound();
 
-        int from = kv.first;
         int to = roundResult.first;
-        EXPECT_GT(m_members.count(to), 0);
-
         std::vector<Message>& pushMessages = roundResult.second;
         for (const auto& pushMsg : pushMessages) {
             EXPECT_EQ(pushMsg.type(), Message::PUSH);
@@ -101,6 +101,11 @@ int TestProtocol::numTicks() const
 const std::unordered_set<int>& TestProtocol::peers() const
 {
     return m_peerIds;
+}
+
+const RRS::NetworkConfig TestProtocol::networkConfig() const
+{
+    return m_networkConfig;
 }
 
 const std::unordered_map<int, RRS::RumorMember>& TestProtocol::members() const
@@ -158,9 +163,10 @@ std::ostream& TestProtocol::printRumorState(std::ostream& outStream) const
 TEST(TestProtocol, Spread_One_Rumor)
 {
     std::mutex mutex;
-    std::condition_variable cond_var;
+    std::condition_variable doneCondVar;
 
     TestProtocol testObj(8);
+
     // Add rumor and map it to an int
     testObj.insertRumor(0, "Are Eminem and Nicki Minaj an item, or are they messing with us?");
 
@@ -170,29 +176,35 @@ TEST(TestProtocol, Spread_One_Rumor)
     // Schedule periodic ticks
     std::thread([&]()
     {
-        while (!testObj.allRumorsOld()) {
+        // This is an estimation, need to replace random selection with a callback
+        int maxNumOfRounds = 4 * testObj.networkConfig().maxRoundsTotal();
+        while (!testObj.allRumorsOld() && maxNumOfRounds-- > 0) {
             testObj.tick();
             std::this_thread::sleep_for(testObj.tickInterval());
         }
 
         // mark as isOld and signal to exit
         std::lock_guard<std::mutex> lock(mutex);
-        cond_var.notify_one();
+        doneCondVar.notify_one();
     }).detach();
 
     // Schedule timeout
     std::thread([&]()
     {
-        int lnn = std::ceil(std::log(testObj.peers().size()));
-        std::this_thread::sleep_for(
-                                 std::chrono::milliseconds(2 * lnn * testObj.tickInterval()));
+        // Calculate timeout and sleep
+        int lnn = static_cast<int>(std::ceil(std::log(testObj.peers().size())));
+        std::chrono::milliseconds timeoutMs(2 * lnn * testObj.tickInterval());
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMs));
+
+        // Notify done
         std::lock_guard<std::mutex> lock(mutex);
-        cond_var.notify_one();
+        doneCondVar.notify_one();
     }).detach();
 
+    // Wait for condition variable signal
     {
         std::unique_lock<std::mutex> lock(mutex);
-        cond_var.wait(lock);
+        doneCondVar.wait(lock);
         EXPECT_TRUE(testObj.allRumorsOld());
 
         std::cout << "Rumor/Peer state:\n[";

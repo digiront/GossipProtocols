@@ -21,6 +21,22 @@ long toSeconds(const Time& now)
 }
 
 struct System {
+  private:
+    int nextId(int memberId) const
+    {
+        static std::unordered_map<int, int> memberToLastIndex;
+        if (memberToLastIndex.count(memberId) <= 0) {
+            memberToLastIndex[memberId] = memberId;
+        }
+
+        int& idx = memberToLastIndex[memberId];
+        if (++idx == memberId) {
+            idx++;
+        }
+        return idx % m_members.size();
+    }
+
+  public:
     std::unordered_map<int, RRS::RumorMember> m_members;
     NetworkConfig m_networkConfig;
     std::vector<int> m_rumors;
@@ -49,10 +65,11 @@ struct System {
         }
 
         // This is an estimation, need to replace random selection with a callback
-        m_maxNumTicks = 4 * m_networkConfig.maxRoundsTotal();
+        m_maxNumTicks = 3 * m_networkConfig.maxRoundsTotal();
 
         for (auto i : peerIds) {
-            m_members.insert(std::make_pair(i, RumorMember(peerIds, m_networkConfig)));
+            auto nextCb = [=]() { return nextId(i); };
+            m_members.insert(std::make_pair(i, RumorMember(peerIds, m_networkConfig, nextCb)));
         }
     }
 
@@ -72,10 +89,6 @@ struct System {
     {
         auto isRumorOld = [&](int rumorId) -> bool {
             for (const auto& kv : m_members) {
-                if (!kv.second.rumorExists(rumorId)) {
-                    continue;
-                }
-
                 if (!kv.second.isOld(rumorId)) {
                     return false;
                 }
@@ -129,6 +142,23 @@ struct System {
             EXPECT_EQ(pullMsg.type(), Message::PULL);
             send(now, member.id(), recvResult.first, pullMsg);
         }
+    }
+
+    std::ostream& printRumorsState(std::ostream& outStream) const
+    {
+        typedef std::unordered_map<int, RumorStateMachine> RumorsMap;
+        for (const auto& kv : m_members) {
+            const int memberId = kv.first;
+            const RumorsMap& rumorsMap = kv.second.rumorsMap();
+            for (const auto& kv2 : rumorsMap) {
+                const int rumorId = kv2.first;
+                outStream << "\n{ MemberId: " << memberId
+                          << ", RumorId: " << rumorId
+                          << ", State: " << kv2.second
+                          << "}";
+            }
+        }
+        return outStream;
     }
 };
 
@@ -197,6 +227,7 @@ TEST(SystemTest, Smoke)
 
         EXPECT_EQ(system.m_epochCount, 199);
 
+        system.printRumorsState(std::cout) << std::endl;
     }
 }
 

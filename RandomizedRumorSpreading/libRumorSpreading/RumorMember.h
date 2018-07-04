@@ -4,6 +4,7 @@
 #include <map>
 #include <unordered_set>
 #include <mutex>
+#include <functional>
 
 #include "RumorSpreadingInterface.h"
 #include "MemberID.h"
@@ -15,6 +16,9 @@ namespace RRS {
 // This is a thread-safe implementation of the 'RumorSpreadingInterface'.
 class RumorMember : public RumorSpreadingInterface {
   public:
+    // TYPES
+    typedef std::function<int()> NextMemberCb;
+
     // ENUMS
     enum StatisticKey {
         NumPeers,
@@ -35,21 +39,35 @@ class RumorMember : public RumorSpreadingInterface {
     std::vector<int>                           m_peers;
     std::unordered_set<int>                    m_peersInCurrentRound;
     std::unordered_map<int, RumorStateMachine> m_rumors;
-    std::unordered_set<int>                    m_oldRumors;
     mutable std::mutex                         m_mutex;
+    NextMemberCb                               m_nextMemberCb;
     std::map<StatisticKey, double>             m_statistics;
 
     // METHODS
+    // Copy the member ids into a vector
+    void toVector(const std::unordered_set<int>& peers);
+
+    // Return a randomly selected member id
+    int chooseRandomMember();
+
+    // Add the specified 'value' to the previous statistic value
     void increaseStatValue(StatisticKey key, double value);
 
   public:
     // CONSTRUCTORS
-    // Automatically figures out the network parameters based on 'peers.size()'.
+    /// Create an instance which automatically figures out the network parameters.
     RumorMember(const std::unordered_set<int>& peers, int id = MemberID::next());
+    RumorMember(const std::unordered_set<int>& peers,
+                const NextMemberCb& cb,
+                int id = MemberID::next());
 
-    // Used for manually passed network parameters.
+    /// Used for manually passed network parameters.
     RumorMember(const std::unordered_set<int>& peers,
                 const NetworkConfig& networkConfig,
+                int id = MemberID::next());
+    RumorMember(const std::unordered_set<int>& peers,
+                const NetworkConfig& networkConfig,
+                const NextMemberCb& cb,
                 int id = MemberID::next());
 
     RumorMember(const RumorMember& other);

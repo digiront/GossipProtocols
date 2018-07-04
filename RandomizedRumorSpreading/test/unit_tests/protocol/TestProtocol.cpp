@@ -18,7 +18,39 @@ void TestProtocol::constructNetwork(size_t numOfPeers)
     }
 
     for (auto i : m_peerIds) {
-        m_members.insert(std::make_pair(i, RumorMember(m_peerIds, m_networkConfig)));
+        auto nextCb = [=]() { return nextId(i); };
+        m_members.insert(std::make_pair(i, RumorMember(m_peerIds, m_networkConfig, nextCb)));
+    }
+}
+
+int TestProtocol::nextId(int memberId) const
+{
+    static std::map<int, int> memberToLastIndex;
+    if (memberToLastIndex.count(memberId) <= 0) {
+        memberToLastIndex[memberId] = memberId;
+    }
+
+    int& idx = memberToLastIndex[memberId];
+    if (++idx == memberId) {
+        idx++;
+    }
+    return idx % m_peerIds.size();
+}
+
+void TestProtocol::handleMessage(int fromMember, int toMember, const Message& msg)
+{
+    RumorMember& member = m_members.find(toMember)->second;
+    std::pair<int, std::vector<Message>> recvResult =  member.receivedMessage(msg, fromMember);
+    for (const auto& pullMsg : recvResult.second) {
+        EXPECT_EQ(pullMsg.type(), Message::PULL);
+
+        // handle each message in another thread
+        std::thread(std::bind(&TestProtocol::handleMessage,
+                              this,
+                              member.id(),
+                              recvResult.first,
+                              pullMsg))
+        .detach();
     }
 }
 
@@ -57,23 +89,6 @@ void TestProtocol::clear()
 {
     m_rumorIdToStringPtr.clear();
     m_StringToRumorId.clear();
-}
-
-void TestProtocol::handleMessage(int fromMember, int toMember, const Message& msg)
-{
-    RumorMember& member = m_members.find(toMember)->second;
-    std::pair<int, std::vector<Message>> recvResult =  member.receivedMessage(msg, fromMember);
-    for (const auto& pullMsg : recvResult.second) {
-        EXPECT_EQ(pullMsg.type(), Message::PULL);
-
-        // handle each message in another thread
-        std::thread(std::bind(&TestProtocol::handleMessage,
-                    this,
-                    member.id(),
-                    recvResult.first,
-                    pullMsg))
-                    .detach();
-    }
 }
 
 void TestProtocol::tick()
@@ -116,10 +131,6 @@ const std::unordered_map<int, RRS::RumorMember>& TestProtocol::members() const
 bool TestProtocol::isRumorOld(int rumorId) const
 {
     for (const auto& kv : m_members) {
-        if (!kv.second.rumorExists(rumorId)) {
-            continue;
-        }
-
         if (!kv.second.isOld(rumorId)) {
             return false;
         }
@@ -142,8 +153,9 @@ const std::chrono::milliseconds& TestProtocol::tickInterval() const
     return m_tickInterval;
 }
 
-std::ostream& TestProtocol::printRumorState(std::ostream& outStream) const
+std::ostream& TestProtocol::printRumorsState(std::ostream& outStream) const
 {
+    std::cout << "Rumor/Peer state:\n[";
     typedef std::unordered_map<int, RumorStateMachine> RumorsMap;
     for (const auto& kv : m_members) {
         const int memberId = kv.first;
@@ -156,6 +168,7 @@ std::ostream& TestProtocol::printRumorState(std::ostream& outStream) const
                       << "}";
         }
     }
+    outStream << "\n]\n";
     return outStream;
 }
 
@@ -177,7 +190,7 @@ TEST(TestProtocol, Spread_One_Rumor)
     std::thread([&]()
     {
         // This is an estimation, need to replace random selection with a callback
-        int maxNumOfRounds = 4 * testObj.networkConfig().maxRoundsTotal();
+        int maxNumOfRounds = 2 * testObj.networkConfig().maxRoundsTotal();
         while (!testObj.allRumorsOld() && maxNumOfRounds-- > 0) {
             testObj.tick();
             std::this_thread::sleep_for(testObj.tickInterval());
@@ -207,8 +220,7 @@ TEST(TestProtocol, Spread_One_Rumor)
         doneCondVar.wait(lock);
         EXPECT_TRUE(testObj.allRumorsOld());
 
-        std::cout << "Rumor/Peer state:\n[";
-        testObj.printRumorState(std::cout) << "\n]\n" << std::endl;
+        testObj.printRumorsState(std::cout) << std::endl;
 
         std::cout << "Member statistics: [" << std::endl;
         for (const auto& kv : testObj.members()) {

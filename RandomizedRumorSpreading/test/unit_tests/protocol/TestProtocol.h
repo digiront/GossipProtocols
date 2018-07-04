@@ -20,10 +20,11 @@ class TestProtocol {
 
     void constructNetwork(size_t numOfPeers);
 
+    int nextId(int memberId) const;
+
     void handleMessage(int fromMember, int toMember, const RRS::Message& msg);
 
   public:
-
     TestProtocol(size_t numPeers);
 
     virtual ~TestProtocol();
@@ -50,7 +51,7 @@ class TestProtocol {
 
     const std::chrono::milliseconds& tickInterval() const;
 
-    std::ostream& printRumorState(std::ostream& outStream) const;
+    std::ostream& printRumorsState(std::ostream& outStream) const;
 };
 
 #endif //RANDOMIZEDRUMORSPREADING_TESTPROTOCOL_H

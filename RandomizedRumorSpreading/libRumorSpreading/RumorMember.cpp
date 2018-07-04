@@ -19,6 +19,24 @@ std::map<RumorMember::StatisticKey, std::string> RumorMember::s_enumKeyToString 
 };
 
 // PRIVATE METHODS
+void RumorMember::toVector(const std::unordered_set<int>& peers)
+{
+    for (const int p : peers) {
+        if (p != m_id) {
+            m_peers.push_back(p);
+        }
+    }
+    increaseStatValue(StatisticKey::NumPeers, peers.size() - 1);
+}
+
+int RumorMember::chooseRandomMember()
+{
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, static_cast<int>(m_peers.size() - 1));
+    return m_peers[dis(gen)];
+}
+
 void RumorMember::increaseStatValue(StatisticKey key, double value)
 {
     if (m_statistics.count(key) <= 0) {
@@ -36,15 +54,22 @@ RumorMember::RumorMember(const std::unordered_set<int>& peers, int id)
 , m_peers()
 , m_rumors()
 , m_mutex()
+, m_nextMemberCb()
 {
-    // Copy the member ids into a vector
-    for (const int p : peers) {
-        if (p != id) {
-            m_peers.push_back(p);
-        }
-    }
-    increaseStatValue(StatisticKey::NumPeers, 1);
+    toVector(peers);
 }
+
+RumorMember::RumorMember(const std::unordered_set<int>& peers, const NextMemberCb& cb, int id)
+: m_id(id)
+  , m_networkConfig(peers.size())
+  , m_peers()
+  , m_rumors()
+  , m_mutex()
+  , m_nextMemberCb(cb)
+{
+    toVector(peers);
+}
+
 
 RumorMember::RumorMember(const std::unordered_set<int>& peers,
                          const NetworkConfig& networkConfig,
@@ -54,35 +79,54 @@ RumorMember::RumorMember(const std::unordered_set<int>& peers,
 , m_peers()
 , m_rumors()
 , m_mutex()
+, m_nextMemberCb()
+, m_statistics()
 {
     assert(networkConfig.networkSize() == peers.size());
-    // Copy the member ids into a vector
-    for (const int p : peers) {
-        if (p != id) {
-            m_peers.push_back(p);
-        }
-    }
-    increaseStatValue(NumPeers, 1);
+    toVector(peers);
 }
 
+RumorMember::RumorMember(const std::unordered_set<int>& peers,
+                         const NetworkConfig& networkConfig,
+                         const NextMemberCb& cb,
+                         int id)
+: m_id(id)
+, m_networkConfig(networkConfig)
+, m_peers()
+, m_rumors()
+, m_mutex()
+, m_nextMemberCb(cb)
+, m_statistics()
+{
+    assert(networkConfig.networkSize() == peers.size());
+    toVector(peers);
+}
+
+// COPY CONSTRUCTOR
 RumorMember::RumorMember(const RumorMember& other)
 : m_id(other.m_id)
 , m_networkConfig(other.m_networkConfig)
 , m_peers(other.m_peers)
 , m_rumors(other.m_rumors)
 , m_mutex()
+, m_nextMemberCb(other.m_nextMemberCb)
+, m_statistics(other.m_statistics)
 {
 }
 
+// MOVE CONSTRUCTOR
 RumorMember::RumorMember(RumorMember&& other) noexcept
 : m_id(other.m_id)
 , m_networkConfig(other.m_networkConfig)
 , m_peers(std::move(other.m_peers))
 , m_rumors(std::move(other.m_rumors))
 , m_mutex()
+, m_nextMemberCb(std::move(other.m_nextMemberCb))
+, m_statistics(std::move(other.m_statistics))
 {
 }
 
+// PUBLIC METHODS
 bool RumorMember::addRumor(int rumorId)
 {
     std::lock_guard<std::mutex> guard(m_mutex); // critical section
@@ -139,20 +183,11 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
         return {-1, std::vector<Message>()};
     }
 
-    // This is a heuristic to determine if this Rumor Spreading instance is too old
-    if (m_statistics[Rounds] >= 2 * m_networkConfig.maxRoundsTotal()) {
-        return {-1, std::vector<Message>()};
-    }
     increaseStatValue(Rounds, 1);
 
-    // Choose a random member
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, m_peers.size() - 1);
-    int toMember = m_peers[dis(gen)];
+    int toMember = m_nextMemberCb ? m_nextMemberCb() : chooseRandomMember();
 
     // Construct the push messages
-    std::vector<int> oldRumorIds;
     std::vector<Message> pushMessages;
     for (auto& kv : m_rumors) {
         RumorStateMachine& stateMach = kv.second;
@@ -160,12 +195,6 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
         pushMessages.emplace_back(Message(Message::PUSH, kv.first, kv.second.age()));
     }
     increaseStatValue(NumPushMessages, pushMessages.size());
-
-    // Move to old rumors
-    for (const int rId : oldRumorIds) {
-        m_rumors.erase(rId);
-        m_oldRumors.insert(rId);
-    }
 
     // No PUSH messages but still want to sent a response to peer.
     if (pushMessages.empty()) {
@@ -210,7 +239,7 @@ bool RumorMember::isOld(int rumorId) const
         return iter->second.isOld();
     }
 
-    return m_oldRumors.count(rumorId) > 0;
+    return false;
 }
 
 std::ostream& RumorMember::printStatistics(std::ostream& outStream) const

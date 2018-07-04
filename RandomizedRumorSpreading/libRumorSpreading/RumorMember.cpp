@@ -74,7 +74,7 @@ RumorMember::RumorMember(const RumorMember& other)
 {
 }
 
-RumorMember::RumorMember(RumorMember&& other)
+RumorMember::RumorMember(RumorMember&& other) noexcept
 : m_id(other.m_id)
 , m_networkConfig(other.m_networkConfig)
 , m_peers(std::move(other.m_peers))
@@ -136,12 +136,12 @@ std::pair<int, std::vector<Message>> RumorMember::advanceRound()
     std::lock_guard<std::mutex> guard(m_mutex); // critical section
 
     if(m_rumors.empty()) {
-        return std::pair<int, std::vector<Message>>();
+        return {-1, std::vector<Message>()};
     }
 
     // This is a heuristic to determine if this Rumor Spreading instance is too old
     if (m_statistics[Rounds] >= 2 * m_networkConfig.maxRoundsTotal()) {
-        return std::pair<int, std::vector<Message>>();
+        return {-1, std::vector<Message>()};
     }
     increaseStatValue(Rounds, 1);
 

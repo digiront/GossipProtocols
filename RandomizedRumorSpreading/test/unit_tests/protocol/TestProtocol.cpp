@@ -42,7 +42,7 @@ void TestProtocol::handleMessage(int fromMember, int toMember, const Message& ms
     RumorMember& member = m_members.find(toMember)->second;
     std::pair<int, std::vector<Message>> recvResult =  member.receivedMessage(msg, fromMember);
     for (const auto& pullMsg : recvResult.second) {
-        EXPECT_EQ(pullMsg.type(), Message::PULL);
+        EXPECT_EQ(pullMsg.type(), Message::Type::PULL);
 
         // handle each message in another thread
         std::thread(std::bind(&TestProtocol::handleMessage,
@@ -102,7 +102,7 @@ void TestProtocol::tick()
         int to = roundResult.first;
         std::vector<Message>& pushMessages = roundResult.second;
         for (const auto& pushMsg : pushMessages) {
-            EXPECT_EQ(pushMsg.type(), Message::PUSH);
+            EXPECT_EQ(pushMsg.type(), Message::Type::PUSH);
             handleMessage(from, to, pushMsg);
         }
     }

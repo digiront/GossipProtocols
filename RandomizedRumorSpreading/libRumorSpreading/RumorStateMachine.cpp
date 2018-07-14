@@ -6,11 +6,11 @@ namespace RRS {
 
 // STATIC MEMBERS
 std::map<RumorStateMachine::State, std::string> RumorStateMachine::s_enumKeyToString = {
-    {UNKNOWN,    LITERAL(UNKNOWN)},
-    {NEW,        LITERAL(NEW)},
-    {KNOWN,      LITERAL(KNOWN)},
-    {OLD,        LITERAL(OLD)},
-    {NUM_STATES, LITERAL(NUM_STATES)}
+    {State::UNKNOWN,    LITERAL(UNKNOWN)},
+    {State::NEW,        LITERAL(NEW)},
+    {State::KNOWN,      LITERAL(KNOWN)},
+    {State::OLD,        LITERAL(OLD)},
+    {State::NUM_STATES, LITERAL(NUM_STATES)}
 };
 
 
@@ -35,7 +35,7 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
         if (theirRound < m_age) {
             numLess++;
         } else if (theirRound >= m_networkConfigPtr->maxRoundsInB()) {
-            m_state = KNOWN;
+            m_state = State::KNOWN;
         } else {
             numGreaterOrEqual++;
         }
@@ -46,7 +46,7 @@ void RumorStateMachine::advanceNew(const std::unordered_set<int>& membersInRound
     }
 
     if (m_roundsInB >= m_networkConfigPtr->maxRoundsInB()) {
-        m_state = KNOWN;
+        m_state = State::KNOWN;
     }
     m_memberRounds.clear();
 }
@@ -63,7 +63,7 @@ void RumorStateMachine::advanceKnown()
 
 void RumorStateMachine::advanceOld()
 {
-    m_state = OLD;
+    m_state = State::OLD;
     m_memberRounds.clear();
 }
 
@@ -111,7 +111,7 @@ RumorStateMachine::RumorStateMachine(const NetworkConfig* networkConfigPtr,
 void RumorStateMachine::rumorReceived(int memberId, int theirRound)
 {
     // Only care about other members when the rumor is NEW
-    if (m_state == NEW) {
+    if (m_state == State::NEW) {
         if (m_memberRounds.count(memberId) > 0) {
             throw std::logic_error("Received a message from the same member within a single round");
         }
@@ -123,16 +123,16 @@ void RumorStateMachine::advanceRound(const std::unordered_set<int>& peersInCurre
 {
     m_age++;
     switch (m_state) {
-        case NEW:
+        case State::NEW:
             advanceNew(peersInCurrentRound);
             return;
-        case KNOWN:
+        case State::KNOWN:
             advanceKnown();
             return;
-        case OLD:
+        case State::OLD:
             m_age++;
             return;
-        case UNKNOWN:
+        case State::UNKNOWN:
         default:
             throw std::logic_error("Unexpected state: " + s_enumKeyToString[m_state]);
     }
@@ -150,7 +150,7 @@ const int RumorStateMachine::age() const
 
 const bool RumorStateMachine::isOld() const
 {
-    return m_state == OLD;
+    return m_state == State::OLD;
 }
 
 std::ostream& operator<<(std::ostream& os, const RumorStateMachine& machine)

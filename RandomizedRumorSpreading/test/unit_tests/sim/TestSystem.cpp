@@ -119,7 +119,7 @@ struct System {
             int to = roundResult.first;
             std::vector<Message>& pushMessages = roundResult.second;
             for (const auto& pushMsg : pushMessages) {
-                EXPECT_EQ(pushMsg.type(), Message::PUSH);
+                EXPECT_EQ(pushMsg.type(), Message::Type::PUSH);
                 send(now, from, to, pushMsg);
             }
         }
@@ -127,10 +127,10 @@ struct System {
 
     void handleMessage(Time now, int fromMember, int toMember, const Message& msg)
     {
-        if (msg.type() == Message::PULL) {
+        if (msg.type() == Message::Type::PULL) {
             ++m_pullMessageCount;
         } else {
-            ASSERT_EQ(msg.type(), Message::PUSH);
+            ASSERT_EQ(msg.type(), Message::Type::PUSH);
             ++m_pushMessageCount;
         }
 
@@ -139,7 +139,7 @@ struct System {
         std::pair<int, std::vector<Message>> recvResult = member.receivedMessage(msg, fromMember);
 
         for (const auto& pullMsg : recvResult.second) {
-            EXPECT_EQ(pullMsg.type(), Message::PULL);
+            EXPECT_EQ(pullMsg.type(), Message::Type::PULL);
             send(now, member.id(), recvResult.first, pullMsg);
         }
     }

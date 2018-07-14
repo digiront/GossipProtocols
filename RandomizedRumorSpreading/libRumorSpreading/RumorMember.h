@@ -20,7 +20,7 @@ class RumorMember : public RumorSpreadingInterface {
     typedef std::function<int()> NextMemberCb;
 
     // ENUMS
-    enum StatisticKey {
+    enum class StatisticKey {
         NumPeers,
         NumMessagesReceived,
         Rounds,

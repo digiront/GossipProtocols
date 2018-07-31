@@ -84,6 +84,8 @@ class RumorMember : public RumorSpreadingInterface {
     // CONST METHODS
     int id() const;
 
+    const NetworkConfig& networkConfig() const;
+
     const std::unordered_map<int, RumorStateMachine>& rumorsMap() const;
 
     bool rumorExists(int rumorId) const;

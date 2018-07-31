@@ -216,6 +216,11 @@ int RumorMember::id() const
     return m_id;
 }
 
+const NetworkConfig& RumorMember::networkConfig() const
+{
+    return m_networkConfig;
+}
+
 const std::unordered_map<int, RumorStateMachine>& RumorMember::rumorsMap() const
 {
     return m_rumors;

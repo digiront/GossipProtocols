@@ -21,7 +21,7 @@ class NetworkConfig {
 
     /**
      * Maximum number of rounds while in state C (KNOWN).
-     * Specified in the paper as `O(ln(n))`.
+     * Specified in the paper as `O(ln(ln(n)))`.
      * Can be configured.
      */
     int m_maxRoundsInC;

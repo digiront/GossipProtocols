@@ -141,6 +141,8 @@ RumorMember::receivedMessage(const Message& message, int fromPeer)
     bool isNewPeer = m_peersInCurrentRound.insert(fromPeer).second;
     increaseStatValue(StatisticKey::NumMessagesReceived, 1);
 
+    // If this is the first time 'fromPeer' sent a PUSH message in this round
+    // then respond with a PULL message for each rumor
     std::vector<Message> pullMessages;
     if (isNewPeer && message.type() == Message::Type::PUSH) {
         for (auto& kv : m_rumors) {

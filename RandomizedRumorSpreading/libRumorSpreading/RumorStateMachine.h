@@ -34,11 +34,11 @@ class RumorStateMachine {
     std::unordered_map<int, int> m_memberRounds; // Member ID --> age
 
     // METHODS
-    void advanceNew(const std::unordered_set<int>& membersInRound);
+    void advanceFromNew(const std::unordered_set<int> &membersInRound);
 
-    void advanceKnown();
+    void advanceFromKnown();
 
-    void advanceOld();
+    void advanceToOld();
 
   public:
     // CONSTRUCTORS
